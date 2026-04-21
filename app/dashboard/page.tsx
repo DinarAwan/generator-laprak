@@ -8,7 +8,8 @@ import FormPanel from '@/components/FormPanel';
 import PaymentModal from '@/components/PaymentModal';
 import { createInitialFormData } from '@/lib/types';
 import type { FormData as LaprakFormData } from '@/lib/types';
-import { Download, Lock, LogOut, GraduationCap, Crown } from 'lucide-react';
+import { Download, Lock, LogOut, GraduationCap, Crown, FileText, Loader2 } from 'lucide-react';
+import { exportToWord } from '@/lib/exportToWord';
 
 export default function DashboardPage() {
   const { user, profile, loading, signOut } = useAuth();
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [formData, setFormData] = useState<LaprakFormData>(
     createInitialFormData('', '')
   );
+  const [isExportingWord, setIsExportingWord] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -42,12 +44,19 @@ export default function DashboardPage() {
   const isPremium = profile?.status_langganan === 'premium';
 
   const handleDownloadPDF = () => {
-    // TODO: Kembalikan logika premium nanti jika sudah rilis berbayar
-    // if (!isPremium) {
-    //   setShowPaymentModal(true);
-    //   return;
-    // }
     window.print();
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      setIsExportingWord(true);
+      await exportToWord(formData);
+    } catch (err) {
+      console.error("Gagal ekspor word:", err);
+      alert("Terjadi kesalahan saat mengekspor ke Word.");
+    } finally {
+      setIsExportingWord(false);
+    }
   };
 
   if (loading) {
@@ -81,6 +90,19 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownloadWord}
+            disabled={isExportingWord}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-[0.97] bg-white border border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isExportingWord ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 text-blue-500" />
+            )}
+            Unduh Word
+          </button>
+
           <button
             onClick={handleDownloadPDF}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all active:scale-[0.97] bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"

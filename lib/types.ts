@@ -53,6 +53,12 @@ export interface DaftarItem {
   halaman: string;
 }
 
+export interface PertemuanItem {
+  id: string;
+  no: string;
+  materi: string;
+}
+
 export interface DaftarData {
   show: boolean;
   pertemuan: string;
@@ -61,6 +67,7 @@ export interface DaftarData {
   gambar: DaftarItem[];
   tabel: DaftarItem[];
   kode: DaftarItem[];
+  listPertemuan: PertemuanItem[];
 }
 
 export interface FormData {
@@ -130,6 +137,9 @@ export function createInitialFormData(nama: string, nim: string): FormData {
       gambar: [],
       tabel: [],
       kode: [],
+      listPertemuan: [
+        { id: crypto.randomUUID(), no: '1', materi: '' }
+      ],
     },
   };
 }

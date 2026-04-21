@@ -1,7 +1,7 @@
 'use client';
 
-import type { DaftarData, FormData, DaftarItem } from '@/lib/types';
-import { LayoutList, RefreshCcw } from 'lucide-react';
+import type { DaftarData, FormData, DaftarItem, PertemuanItem } from '@/lib/types';
+import { LayoutList, RefreshCcw, Plus, Trash2 } from 'lucide-react';
 
 interface DaftarTabProps {
   data: FormData;
@@ -16,8 +16,14 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
     isi: [],
     gambar: [],
     tabel: [],
-    kode: []
+    kode: [],
+    listPertemuan: []
   };
+
+  // Ensure listPertemuan exists for older data
+  if (!daftars.listPertemuan) {
+    daftars.listPertemuan = [];
+  }
 
   const updateDaftars = (field: keyof DaftarData, value: any) => {
     onChange({ ...data, daftars: { ...daftars, [field]: value } });
@@ -29,6 +35,24 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
     updateDaftars(listType, updatedList);
   };
 
+  const addPertemuan = () => {
+    const newList = [...(daftars.listPertemuan || [])];
+    newList.push({ id: crypto.randomUUID(), no: (newList.length + 1).toString(), materi: '' });
+    updateDaftars('listPertemuan', newList);
+  };
+
+  const removePertemuan = (index: number) => {
+    const newList = [...(daftars.listPertemuan || [])];
+    newList.splice(index, 1);
+    updateDaftars('listPertemuan', newList);
+  };
+
+  const updatePertemuan = (index: number, field: keyof PertemuanItem, value: string) => {
+    const newList = [...(daftars.listPertemuan || [])];
+    newList[index] = { ...newList[index], [field]: value };
+    updateDaftars('listPertemuan', newList);
+  };
+
   const capitalizeEachWord = (str: string): string => {
     if (!str) return '';
     return str.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -36,6 +60,22 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
 
   const handleGenerate = () => {
     // Fungsi pintar yang mencari elemen di layar dan mengkalkulasi posisi absolut kertasnya!
+    const toRoman = (num: number): string => {
+      const romanMap: [number, string][] = [
+        [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'],
+        [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']
+      ];
+      let result = '';
+      let n = num;
+      for (const [val, sym] of romanMap) {
+        while (n >= val) {
+          result += sym;
+          n -= val;
+        }
+      }
+      return result || '0';
+    };
+
     const getPageNumber = (id: string): string => {
       const el = document.getElementById(id);
       if (!el) return '';
@@ -54,13 +94,18 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
       
       // Bagi dengan tinggi standar kertas A4 (1122.5px) untuk mengetahui di segment mana dia jatuh
       const pageOffset = Math.floor(Math.max(0, relativeTop) / 1122.5);
-      return (startPage + pageOffset).toString();
+      const isRoman = section.getAttribute('data-is-roman') === 'true';
+      const num = startPage + pageOffset;
+      return isRoman ? toRoman(num) : num.toString();
     };
 
     const getSectionPage = (id: string): string => {
       const section = document.getElementById(`section-${id}`);
       if (!section) return '';
-      return section.getAttribute('data-start-page') || '';
+      const sp = section.getAttribute('data-start-page') || '';
+      if (!sp) return '';
+      const isRoman = section.getAttribute('data-is-roman') === 'true';
+      return isRoman ? toRoman(parseInt(sp, 10)) : sp;
     };
 
     const newGambar: DaftarItem[] = [];
@@ -219,6 +264,48 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
             min="1"
             max="14"
           />
+        </div>
+
+        <div className="mt-4 p-3 bg-white rounded-lg border border-blue-100">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider">Editor Daftar Pertemuan</h4>
+            <button
+              onClick={addPertemuan}
+              className="p-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+              title="Tambah Baris Pertemuan"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {daftars.listPertemuan?.map((p, idx) => (
+              <div key={p.id} className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={p.no}
+                  placeholder="Ke-"
+                  onChange={(e) => updatePertemuan(idx, 'no', e.target.value)}
+                  className="w-10 px-2 py-1 border border-gray-100 rounded text-xs text-center focus:border-blue-300 outline-none"
+                />
+                <input
+                  type="text"
+                  value={p.materi}
+                  placeholder="Judul Materi..."
+                  onChange={(e) => updatePertemuan(idx, 'materi', e.target.value)}
+                  className="flex-1 px-2 py-1 border border-gray-100 rounded text-xs focus:border-blue-300 outline-none"
+                />
+                <button
+                  onClick={() => removePertemuan(idx)}
+                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            {(!daftars.listPertemuan || daftars.listPertemuan.length === 0) && (
+              <p className="text-[10px] text-gray-400 italic text-center py-2">Belum ada daftar pertemuan. Klik tombol + untuk menambah.</p>
+            )}
+          </div>
         </div>
 
         <button

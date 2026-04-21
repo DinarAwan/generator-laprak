@@ -13,6 +13,22 @@ function capitalizeEachWord(str: string): string {
 }
 
 // ── Konstanta A4 ──────────────────────────────────────────────────────────────
+function toRoman(num: number): string {
+  const romanMap: [number, string][] = [
+    [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'],
+    [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']
+  ];
+  let result = '';
+  let n = num;
+  for (const [val, sym] of romanMap) {
+    while (n >= val) {
+      result += sym;
+      n -= val;
+    }
+  }
+  return result || '0';
+}
+
 const A4_PX   = 1122.5;  // 297mm @96dpi
 const PAGE_MT = 151.18;  // 4cm  (margin atas)
 const PAGE_MB = 113.39;  // 3cm  (margin bawah)
@@ -24,12 +40,9 @@ const PRINT_H = A4_PX - PAGE_MT - PAGE_MB; // ≈ 857.93 px
 
 // Selector elemen yang boleh dipindah ke halaman berikutnya
 const BREAKABLE_SEL = [
-  '.soal-container',
-  '.section-block',
   '.breakable-p',
-  'img',
-  '.code-block',
-  '.my-4',
+  '.figure-block',
+  '.header-breakable',
 ].join(', ');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,9 +53,9 @@ function PaginatedText({ text, className = '' }: { text: string; className?: str
   return (
     <div className={className}>
       {paragraphs.map((p, pIdx) => {
-        if (!p.trim()) return <br key={pIdx} />;
+        if (!p.trim()) return <p key={pIdx} className="mb-2 breakable-p min-h-[1.5em]">{"\u00A0"}</p>;
         return (
-          <p key={pIdx} className="mb-2 breakable-p">
+          <p key={pIdx} className="mb-2 breakable-p whitespace-pre-wrap">
             {p}
           </p>
         );
@@ -60,6 +73,7 @@ interface PageSectionProps {
   children: ReactNode;
   hidePageNumber?: boolean;
   isCover?: boolean;
+  isRoman?: boolean;
 }
 
 function PageSection({
@@ -69,6 +83,7 @@ function PageSection({
   children,
   hidePageNumber = false,
   isCover = false,
+  isRoman = false,
 }: PageSectionProps) {
   const [pagesCount, setPagesCount] = useState(1);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -111,8 +126,8 @@ function PageSection({
             if (elBot > pageBottom && elTop < pageBottom) {
               const spaceLeft = pageBottom - elTop;
               if (spaceLeft < elH) {
-                const currentMT = parseFloat(child.style.marginTop || '0') || 0;
-                const push = currentMT + spaceLeft;
+                const oldMT = parseFloat(window.getComputedStyle(child).marginTop) || 0;
+                const push = oldMT + spaceLeft;
                 child.style.marginTop = `${push}px`;
                 newPushMap.set(idx, push);
               }
@@ -187,6 +202,7 @@ function PageSection({
       <div
         id={`section-${id}`}
         data-start-page={startPage}
+        data-is-roman={isRoman}
         className="relative print:hidden flex flex-col gap-[16px]"
         style={{ width: '210mm' }}
       >
@@ -195,8 +211,8 @@ function PageSection({
           style={{
             position: 'absolute',
             top: 0,
-            left: 0,
-            width: '100%',
+            left: `${PAGE_ML}px`,
+            right: `${PAGE_MR}px`,
             visibility: 'hidden',
             pointerEvents: 'none',
             zIndex: -50,
@@ -255,12 +271,12 @@ function PageSection({
               </div>
 
               {/* Nomor halaman */}
-              {!hidePageNumber && pageNum >= 2 && (
+              {!hidePageNumber && (
                 <div
                   className="absolute text-[11pt] font-semibold text-black pointer-events-none"
                   style={{ bottom: `${PAGE_MB / 2}px`, right: `${PAGE_MR}px`, zIndex: 20 }}
                 >
-                  {pageNum}
+                  {isRoman ? toRoman(pageNum) : pageNum}
                 </div>
               )}
             </div>
@@ -324,28 +340,32 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
   const pPreTest = sectionPages['pre-test']         || 1;
   const pHasil   = sectionPages['hasil']            || 1;
 
-  const offsets = {
+  const romanOffsets = {
     cover:              1,
     'daftar-isi':       1 + pCover,
     'daftar-gambar':    1 + pCover + pIsi,
     'daftar-tabel':     1 + pCover + pIsi + pGbr,
     'daftar-kode':      1 + pCover + pIsi + pGbr + pTbl,
     'daftar-pertemuan': 1 + pCover + pIsi + pGbr + pTbl + pKd,
-    'pre-test':         1 + pCover + pIsi + pGbr + pTbl + pKd + pPtm,
-    hasil:              1 + pCover + pIsi + pGbr + pTbl + pKd + pPtm + pPreTest,
-    'post-test':        1 + pCover + pIsi + pGbr + pTbl + pKd + pPtm + pPreTest + pHasil,
+  };
+
+  const arabicOffsets = {
+    'pre-test':         2,
+    hasil:              2 + pPreTest,
+    'post-test':        2 + pPreTest + pHasil,
   };
 
   const renderDaftarPage = (
     id: string,
     title: string,
-    items: { id: string; label: string; halaman: string }[]
+    items: { id: string; label: string; halaman: string }[],
+    isRoman: boolean = false
   ) => {
     if (!daftars.show || (items.length === 0 && id !== 'daftar-pertemuan')) return null;
 
     if (id === 'daftar-pertemuan') {
       return (
-        <PageSection id={id} startPage={offsets[id as keyof typeof offsets]} onPagesCalculated={handlePagesCalculated}>
+        <PageSection id={id} startPage={romanOffsets[id as keyof typeof romanOffsets]} isRoman={isRoman} onPagesCalculated={handlePagesCalculated}>
           <h2 className="font-bold text-[14pt] text-center mb-8">{title}</h2>
           <table className="w-full border-collapse border border-black max-w-[90%] mx-auto">
             <thead>
@@ -355,10 +375,19 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="border border-black px-4 py-2 text-center text-[11pt]">{daftars.pertemuan}</td>
-                <td className="border border-black px-4 py-2 text-center text-[11pt]">{daftars.materi}</td>
-              </tr>
+              {daftars.listPertemuan && daftars.listPertemuan.length > 0 ? (
+                daftars.listPertemuan.map((p) => (
+                  <tr key={p.id}>
+                    <td className="border border-black px-4 py-1 text-center text-[11pt]">{p.no}</td>
+                    <td className="border border-black px-4 py-2 text-center text-[11pt]">{p.materi}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="border border-black px-4 py-1 text-center text-[11pt]">{daftars.pertemuan}</td>
+                  <td className="border border-black px-4 py-2 text-center text-[11pt]">{daftars.materi}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </PageSection>
@@ -366,7 +395,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
     }
 
     return (
-      <PageSection id={id} startPage={offsets[id as keyof typeof offsets]} onPagesCalculated={handlePagesCalculated}>
+      <PageSection id={id} startPage={romanOffsets[id as keyof typeof romanOffsets]} isRoman={isRoman} onPagesCalculated={handlePagesCalculated}>
         <h2 className="font-bold text-[14pt] text-center mb-10">{title}</h2>
         <div className="flex flex-col gap-2 w-full">
           {items.map((item) => (
@@ -385,7 +414,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
     <div id="print-area" className="a4-paper">
 
       {/* ══════════ COVER ══════════ */}
-      <PageSection id="cover" startPage={offsets['cover']} onPagesCalculated={handlePagesCalculated} hidePageNumber isCover>
+      <PageSection id="cover" startPage={romanOffsets['cover']} onPagesCalculated={handlePagesCalculated} hidePageNumber isCover isRoman>
         <div className="cover-section top-section">
           <h1 className="font-bold text-[14pt] leading-tight mt-6">LAPORAN PRAKTIKUM</h1>
           <h2 className="font-bold text-[14pt] leading-tight">({cover.mata_praktikum || 'Mata Praktikum'})</h2>
@@ -410,19 +439,19 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
       </PageSection>
 
       {/* ══════════ DAFTAR ══════════ */}
-      {renderDaftarPage('daftar-isi',       'DAFTAR ISI',                 daftars.isi)}
-      {renderDaftarPage('daftar-gambar',    'DAFTAR GAMBAR',              daftars.gambar)}
-      {renderDaftarPage('daftar-tabel',     'DAFTAR TABEL',               daftars.tabel)}
-      {renderDaftarPage('daftar-kode',      'DAFTAR KODE PROGRAM',        daftars.kode)}
-      {renderDaftarPage('daftar-pertemuan', 'DAFTAR PERTEMUAN PRAKTIKUM', [])}
+      {renderDaftarPage('daftar-isi',       'DAFTAR ISI',                 daftars.isi, true)}
+      {renderDaftarPage('daftar-gambar',    'DAFTAR GAMBAR',              daftars.gambar, true)}
+      {renderDaftarPage('daftar-tabel',     'DAFTAR TABEL',               daftars.tabel, true)}
+      {renderDaftarPage('daftar-kode',      'DAFTAR KODE PROGRAM',        daftars.kode, true)}
+      {renderDaftarPage('daftar-pertemuan', 'DAFTAR PERTEMUAN PRAKTIKUM', [], true)}
 
       {/* ══════════ BAB I: PRE-TEST ══════════ */}
-      <PageSection id="pre-test" startPage={offsets['pre-test']} onPagesCalculated={handlePagesCalculated}>
+      <PageSection id="pre-test" startPage={arabicOffsets['pre-test']} onPagesCalculated={handlePagesCalculated}>
         <div className="flex gap-4">
           <h2 className="font-bold text-[11pt] w-8">I.</h2>
           <div className="flex-1">
             <h2 className="font-bold text-[11pt] mb-4">Pre Test</h2>
-            {data.preTestIntro && <p className="text-[11pt] mb-3 text-justify">{data.preTestIntro}</p>}
+            {data.preTestIntro && <PaginatedText className="text-[11pt] mb-3 text-justify" text={data.preTestIntro} />}
             <div className="space-y-4">
               {preTest.length > 0 ? (
                 preTest.map((soal, index) => {
@@ -432,23 +461,23 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                       <div className="flex gap-3 pl-4">
                         <span className="text-[11pt] w-4">{letter}.</span>
                         <div className="flex-1">
-                          <p className="text-[11pt] text-justify">{soal.pertanyaan || `Pertanyaan ${index + 1}`}</p>
+                          <PaginatedText className="text-[11pt] text-justify" text={soal.pertanyaan || `Pertanyaan ${index + 1}`} />
                         </div>
                       </div>
                       <div className="flex gap-3 pl-[3.25rem] mt-1">
                         <span className="text-[11pt] w-4">1.</span>
                         <div className="flex-1 space-y-3">
-                          <p className="text-[11pt] text-justify">Jawaban</p>
+                          <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
                           {(!soal.tipe || soal.tipe === 'image') && soal.gambar_url && (
-                            <div id={`pre-img-${index}`} className="text-center my-3">
-                              <img src={soal.gambar_url} alt={`Gambar I.${index + 1}`} className="mx-auto max-w-[90%] border border-gray-300" />
+                            <div id={`pre-img-${index}`} className="text-center my-3 figure-block">
+                              <img src={soal.gambar_url} alt={`Gambar I.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
                               <p className="text-[10pt] font-semibold italic mt-2 text-center">
                                 Gambar 1.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
                               </p>
                             </div>
                           )}
                           {soal.tipe === 'code' && soal.code && (
-                            <div id={`pre-code-${index}`} className="text-left my-3">
+                            <div id={`pre-code-${index}`} className="text-left my-3 figure-block">
                               <div className="code-block">
                                 <table className="w-full border-collapse">
                                   <tbody>
@@ -467,7 +496,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                             </div>
                           )}
                           {soal.tipe === 'table' && soal.table_data && (
-                            <div id={`pre-tab-${index}`} className="w-full my-4">
+                            <div id={`pre-tab-${index}`} className="w-full my-4 figure-block">
                               <p className="text-[10pt] font-semibold italic mb-2 text-center">
                                 Tabel 1.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
                               </p>
@@ -484,7 +513,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                               </table>
                             </div>
                           )}
-                          {soal.analisis && <p className="text-[11pt] text-justify">{soal.analisis}</p>}
+                          {soal.analisis && <PaginatedText className="text-[11pt] text-justify" text={soal.analisis} />}
                         </div>
                       </div>
                     </div>
@@ -499,19 +528,19 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
       </PageSection>
 
       {/* ══════════ BAB II: HASIL ══════════ */}
-      <PageSection id="hasil" startPage={offsets['hasil']} onPagesCalculated={handlePagesCalculated}>
+      <PageSection id="hasil" startPage={arabicOffsets['hasil']} onPagesCalculated={handlePagesCalculated}>
         <div className="flex gap-4">
           <h2 className="font-bold text-[11pt] w-8">II.</h2>
           <div className="flex-1">
             <h2 className="font-bold text-[11pt] mb-4">Hasil Praktikum</h2>
-            {hasil.intro && <p className="text-[11pt] mb-4 text-justify">{hasil.intro}</p>}
+            {hasil.intro && <PaginatedText className="text-[11pt] mb-4 text-justify" text={hasil.intro} />}
             <div className="space-y-4">
 
               {/* A. Alat dan Bahan */}
               <div className="flex gap-3 pl-4 section-block">
                 <span className="text-[11pt] font-bold w-4">A.</span>
                 <div className="flex-1">
-                  <p className="text-[11pt] font-bold mb-1">Alat dan Bahan:</p>
+                  <p className="text-[11pt] font-bold mb-1 header-breakable">Alat dan Bahan:</p>
                   <PaginatedText className="text-[11pt] text-justify" text={hasil.alat_bahan || '(Daftar perangkat lunak, hardware, atau library yang digunakan).'} />
                 </div>
               </div>
@@ -520,7 +549,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
               <div className="flex gap-3 pl-4 section-block">
                 <span className="text-[11pt] font-bold w-4">B.</span>
                 <div className="flex-1">
-                  <p className="text-[11pt] font-bold mb-1">Langkah Kerja:</p>
+                  <p className="text-[11pt] font-bold mb-1 header-breakable">Langkah Kerja:</p>
                   <PaginatedText className="text-[11pt] text-justify" text={hasil.langkah_kerja || '(Ringkasan singkat prosedur yang dilakukan).'} />
                 </div>
               </div>
@@ -529,16 +558,16 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
               <div className="flex gap-3 pl-4 section-block">
                 <span className="text-[11pt] font-bold w-4">C.</span>
                 <div className="flex-1">
-                  <p className="text-[11pt] font-bold mb-1">Implementasi/Screenshot:</p>
+                  <p className="text-[11pt] font-bold mb-1 header-breakable">Implementasi/Screenshot:</p>
                   <p className="text-[11pt] text-justify mb-3">
                     {hasil.screenshots.some((s) => s.url || s.code || s.table_data) ? '' : 'Sematkan screenshot kode program atau hasil running di sini.'}
                   </p>
                   {hasil.screenshots.map((ss, index) =>
                     (ss.tipe === 'image' && ss.url) || (ss.tipe === 'code' && ss.code) || (ss.tipe === 'table' && ss.table_data) ? (
                       <div key={ss.id} className="my-4 section-block">
-                        {ss.penjelasan_atas && <p className="text-[11pt] text-justify mb-2">{ss.penjelasan_atas}</p>}
+                        {ss.penjelasan_atas && <PaginatedText className="text-[11pt] text-justify mb-2" text={ss.penjelasan_atas} />}
                         {ss.tipe === 'table' ? (
-                          <div id={`has-tab-${index}`} className="w-full my-4">
+                          <div id={`has-tab-${index}`} className="w-full my-4 figure-block">
                             <p className="text-[10pt] font-semibold italic mb-2 text-center">Tabel 2.{index + 1} {ss.judul ? capitalizeEachWord(ss.judul) : ''}</p>
                             <table className="w-full border-collapse border border-black mb-4 mx-auto max-w-[95%]">
                               <tbody>
@@ -553,12 +582,12 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                             </table>
                           </div>
                         ) : ss.tipe === 'image' ? (
-                          <div id={`has-img-${index}`} className="text-center">
-                            <img src={ss.url} alt={`Gambar 2.${index + 1}`} className="mx-auto max-w-[90%] border border-gray-300" />
+                          <div id={`has-img-${index}`} className="text-center figure-block">
+                            <img src={ss.url} alt={`Gambar 2.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
                             <p className="text-[10pt] font-semibold italic mt-2 text-center">Gambar 2.{index + 1} {ss.judul ? capitalizeEachWord(ss.judul) : ''}</p>
                           </div>
                         ) : (
-                          <div id={`has-code-${index}`} className="text-left">
+                          <div id={`has-code-${index}`} className="text-left figure-block">
                             <div className="code-block">
                               <table className="w-full border-collapse">
                                 <tbody>
@@ -574,7 +603,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                             <p className="text-[10pt] font-semibold italic mt-2 text-center">Kode Program 2.{index + 1} {ss.judul ? capitalizeEachWord(ss.judul) : ''}</p>
                           </div>
                         )}
-                        {ss.penjelasan_bawah && <p className="text-[11pt] text-justify mt-2">{ss.penjelasan_bawah}</p>}
+                        {ss.penjelasan_bawah && <PaginatedText className="text-[11pt] text-justify mt-2" text={ss.penjelasan_bawah} />}
                       </div>
                     ) : null
                   )}
@@ -585,7 +614,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
               <div className="flex gap-3 pl-4 section-block">
                 <span className="text-[11pt] font-bold w-4">D.</span>
                 <div className="flex-1">
-                  <p className="text-[11pt] font-bold mb-1">Analisis Hasil :</p>
+                  <p className="text-[11pt] font-bold mb-1 header-breakable">Analisis Hasil :</p>
                   <PaginatedText className="text-[11pt] text-justify" text={hasil.analisis_hasil || 'Berikan penjelasan mengenai hasil yang didapatkan. Mengapa hasilnya demikian? Apakah ada kendala saat proses berlangsung?'} />
                 </div>
               </div>
@@ -595,12 +624,12 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
       </PageSection>
 
       {/* ══════════ BAB III: POST-TEST ══════════ */}
-      <PageSection id="post-test" startPage={offsets['post-test']} onPagesCalculated={handlePagesCalculated}>
+      <PageSection id="post-test" startPage={arabicOffsets['post-test']} onPagesCalculated={handlePagesCalculated}>
         <div className="flex gap-4">
           <h2 className="font-bold text-[11pt] w-8">III.</h2>
           <div className="flex-1">
             <h2 className="font-bold text-[11pt] mb-4">Post Test</h2>
-            {data.postTestIntro && <p className="text-[11pt] mb-3 text-justify">{data.postTestIntro}</p>}
+            {data.postTestIntro && <PaginatedText className="text-[11pt] mb-3 text-justify" text={data.postTestIntro} />}
             <div className="space-y-4">
               {postTest.map((soal, index) => {
                 const letter = String.fromCharCode(65 + index);
@@ -609,23 +638,23 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                     <div className="flex gap-3 pl-4">
                       <span className="text-[11pt] w-4">{letter}.</span>
                       <div className="flex-1">
-                        <p className="text-[11pt] text-justify">{soal.pertanyaan || `Pertanyaan ${index + 1}`}</p>
+                        <PaginatedText className="text-[11pt] text-justify" text={soal.pertanyaan || `Pertanyaan ${index + 1}`} />
                       </div>
                     </div>
                     <div className="flex gap-3 pl-[3.25rem] mt-1">
                       <span className="text-[11pt] w-4">1.</span>
                       <div className="flex-1 space-y-3">
-                        <p className="text-[11pt] text-justify">Jawaban</p>
+                        <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
                         {(!soal.tipe || soal.tipe === 'image') && soal.gambar_url && (
-                          <div id={`pos-img-${index}`} className="text-center my-3">
-                            <img src={soal.gambar_url} alt={`Gambar 3.${index + 1}`} className="mx-auto max-w-[90%] border border-gray-300" />
+                          <div id={`pos-img-${index}`} className="text-center my-3 figure-block">
+                            <img src={soal.gambar_url} alt={`Gambar 3.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
                             <p className="text-[10pt] font-semibold italic mt-2 text-center">
                               Gambar 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
                             </p>
                           </div>
                         )}
                         {soal.tipe === 'code' && soal.code && (
-                          <div id={`pos-code-${index}`} className="text-left my-3">
+                          <div id={`pos-code-${index}`} className="text-left my-3 figure-block">
                             <div className="code-block">
                               <table className="w-full border-collapse">
                                 <tbody>
@@ -644,7 +673,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                           </div>
                         )}
                         {soal.tipe === 'table' && soal.table_data && (
-                          <div id={`pos-tab-${index}`} className="w-full my-4">
+                          <div id={`pos-tab-${index}`} className="w-full my-4 figure-block">
                             <p className="text-[10pt] font-semibold italic mb-2 text-center">
                               Tabel 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
                             </p>
@@ -661,7 +690,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                             </table>
                           </div>
                         )}
-                        {soal.analisis && <p className="text-[11pt] text-justify">{soal.analisis}</p>}
+                        {soal.analisis && <PaginatedText className="text-[11pt] text-justify" text={soal.analisis} />}
                       </div>
                     </div>
                   </div>
