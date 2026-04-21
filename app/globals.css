@@ -40,22 +40,9 @@ body {
   color: #000000;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-/* Base page container - exactly 1 A4 relative */
-.page-container {
-  width: 210mm;
-  min-height: 297mm;
-  background: #ffffff;
-  color: #000000;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.08);
-  border-radius: 2px;
-  position: relative;
-  /* MARGIN TBLR: 4 3 4 3 = Top 4cm, Right 3cm, Bottom 3cm, Left 4cm */
-  padding: 4cm 3cm 3cm 4cm;
+  /* Spacing between sections (Pre-Test, Hasil, Post-Test) */
+  gap: 16px;
   font-family: 'Calibri', 'Segoe UI', sans-serif;
-  box-sizing: border-box;
 }
 
 /* ============================================
@@ -118,28 +105,24 @@ body {
    ============================================ */
 
 @media print {
-  /* Hide everything except the print area */
-  body * {
-    visibility: hidden;
-  }
+  body * { visibility: hidden; }
+  body { overflow: auto; }
 
-  body {
-    overflow: auto;
-  }
-
+  /* The print-only blocks inside PageSection are shown */
   #print-area,
-  #print-area * {
-    visibility: visible;
-  }
+  #print-area * { visibility: visible; }
 
   #print-area {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 0; top: 0;
     width: 210mm;
-    margin: 0;
-    padding: 0;
-    gap: 0;
+    margin: 0; padding: 0; gap: 0;
+  }
+
+  /* Protect specific elements from being sliced in half across pages! */
+  .soal-container, table, img, .code-block, .cover-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .a4-wrapper {
@@ -149,28 +132,12 @@ body {
     margin: 0;
   }
 
-  .page-container {
-    box-shadow: none !important;
-    border-radius: 0;
-    page-break-after: always;
-    page-break-inside: avoid;
-    height: 297mm !important;
-    min-height: 297mm !important;
-    width: 210mm !important;
-  }
-
-  /* Specific fix to ensure cover stays full page */
-  .cover-page {
-    page-break-after: always !important;
-    height: 297mm !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
+  .no-print { display: none !important; }
 
   @page {
     size: A4;
-    margin: 0; /* Let the container padding handle the margins */
+    /* Margin 0 effectively kills the ugly Chrome auto-watermark URL & Date */
+    margin: 0;
   }
 }
+
