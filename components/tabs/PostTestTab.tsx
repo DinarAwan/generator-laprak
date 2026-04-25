@@ -203,32 +203,126 @@ export default function PostTestTab({ intro, onIntroChange, data, onChange }: Po
                   </div>
                 </div>
               ) : (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">
-                    Upload Screenshot
+                <div className="space-y-4">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Daftar Gambar
                   </label>
-                  <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all">
-                    <ImagePlus className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">
-                      {soal.gambar ? soal.gambar.name : 'Pilih gambar...'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        if (file) updateSoal(index, 'gambar', file);
-                      }}
-                    />
-                  </label>
-                  {soal.gambar_url && (
-                    <img
-                      src={soal.gambar_url}
-                      alt="Preview"
-                      className="mt-2 max-h-32 rounded-lg border border-gray-200"
-                    />
+                  
+                  {(!soal.list_gambar || soal.list_gambar.length === 0) && !soal.gambar && (
+                    <p className="text-xs text-gray-400 italic">Belum ada gambar ditambahkan.</p>
                   )}
+
+                  {/* Single image fallback preview */}
+                  {soal.gambar_url && (!soal.list_gambar || soal.list_gambar.length === 0) && (
+                    <div className="border border-gray-200 rounded-lg p-3 bg-white space-y-2 relative">
+                      <div className="flex items-center gap-2">
+                        <img src={soal.gambar_url} alt="Preview" className="w-16 h-16 object-cover rounded-md border" />
+                        <div className="flex-1 text-xs font-medium text-gray-700 truncate">{soal.gambar?.name || 'Gambar'}</div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 italic">Tips: Gunakan tombol "Tambah Gambar" di bawah untuk menambahkan banyak gambar beserta nama dan penjelasan.</p>
+                    </div>
+                  )}
+
+                  {/* Multiple Images List */}
+                  {soal.list_gambar?.map((gbr, gIdx) => (
+                    <div key={gbr.id} className="border border-gray-200 rounded-lg p-3 bg-white space-y-3 relative group/img">
+                      <button
+                        onClick={() => {
+                          const updated = [...data];
+                          updated[index].list_gambar = updated[index].list_gambar?.filter((_, i) => i !== gIdx);
+                          onChange(updated);
+                        }}
+                        className="absolute top-2 right-2 p-1 rounded-md text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover/img:opacity-100"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      <div className="flex items-start gap-3">
+                        <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all shrink-0">
+                          {gbr.url ? (
+                            <img src={gbr.url} alt="Preview" className="w-full h-full object-cover rounded-md" />
+                          ) : (
+                            <ImagePlus className="w-5 h-5 text-gray-400" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              if (file) {
+                                const updated = [...data];
+                                if (updated[index].list_gambar) {
+                                  updated[index].list_gambar![gIdx] = {
+                                    ...updated[index].list_gambar![gIdx],
+                                    file: file,
+                                    url: URL.createObjectURL(file)
+                                  };
+                                  onChange(updated);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                        
+                        <div className="flex-1 space-y-2">
+                          <div>
+                            <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Nama Gambar</label>
+                            <input
+                              type="text"
+                              value={gbr.nama || ''}
+                              onChange={(e) => {
+                                const updated = [...data];
+                                if (updated[index].list_gambar) {
+                                  updated[index].list_gambar![gIdx].nama = e.target.value;
+                                  onChange(updated);
+                                }
+                              }}
+                              placeholder="cth: Tampilan Login"
+                              className="w-full px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Penjelasan Gambar</label>
+                            <textarea
+                              value={gbr.penjelasan || ''}
+                              onChange={(e) => {
+                                const updated = [...data];
+                                if (updated[index].list_gambar) {
+                                  updated[index].list_gambar![gIdx].penjelasan = e.target.value;
+                                  onChange(updated);
+                                }
+                              }}
+                              placeholder="Tuliskan penjelasan gambar di sini..."
+                              rows={2}
+                              className="w-full px-2 py-1 border border-gray-200 rounded focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all outline-none text-xs resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => {
+                      const updated = [...data];
+                      if (!updated[index].list_gambar) {
+                        updated[index].list_gambar = [];
+                      }
+                      updated[index].list_gambar!.push({
+                        id: crypto.randomUUID(),
+                        file: null,
+                        url: '',
+                        nama: '',
+                        penjelasan: ''
+                      });
+                      onChange(updated);
+                    }}
+                    className="w-full flex items-center justify-center gap-1 py-1.5 border border-dashed border-gray-200 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50/50 transition-all text-xs text-gray-500 font-medium rounded-lg"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Tambah Gambar
+                  </button>
                 </div>
               )}
             </div>

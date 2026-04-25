@@ -15,6 +15,14 @@ export interface CoverData {
   nim: string;
 }
 
+export interface GambarItem {
+  id: string;
+  file: File | null;
+  url: string;
+  nama: string;
+  penjelasan: string;
+}
+
 export interface SoalItem {
   id: string;
   pertanyaan: string;
@@ -25,6 +33,7 @@ export interface SoalItem {
   table_data: string[][];
   judul_gambar: string;
   analisis: string;
+  list_gambar?: GambarItem[];
 }
 
 export interface HasilData {
@@ -91,6 +100,7 @@ export function createEmptySoal(): SoalItem {
     table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
     judul_gambar: '',
     analisis: '',
+    list_gambar: [],
   };
 }
 

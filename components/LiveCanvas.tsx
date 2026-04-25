@@ -645,12 +645,34 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                       <span className="text-[11pt] w-4">1.</span>
                       <div className="flex-1 space-y-3">
                         <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
-                        {(!soal.tipe || soal.tipe === 'image') && soal.gambar_url && (
-                          <div id={`pos-img-${index}`} className="text-center my-3 figure-block">
-                            <img src={soal.gambar_url} alt={`Gambar 3.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
-                            <p className="text-[10pt] font-semibold italic mt-2 text-center">
-                              Gambar 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
-                            </p>
+                        {(!soal.tipe || soal.tipe === 'image') && (
+                          <div className="space-y-4">
+                            {/* Single Image fallback */}
+                            {soal.gambar_url && (!soal.list_gambar || soal.list_gambar.length === 0) && (
+                              <div id={`pos-img-${index}`} className="text-center my-3 figure-block">
+                                <img src={soal.gambar_url} alt={`Gambar 3.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
+                                <p className="text-[10pt] font-semibold italic mt-2 text-center">
+                                  Gambar 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Multiple Images */}
+                            {soal.list_gambar && soal.list_gambar.map((gbr, gIdx) => (
+                              <div key={gbr.id} className="my-3 figure-block">
+                                {gbr.url && (
+                                  <div className="text-center">
+                                    <img src={gbr.url} alt={`Gambar 3.${index + 1}.${gIdx + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
+                                    <p className="text-[10pt] font-semibold italic mt-2 text-center">
+                                      Gambar 3.{index + 1}.{gIdx + 1} {gbr.nama ? capitalizeEachWord(gbr.nama) : ''}
+                                    </p>
+                                  </div>
+                                )}
+                                {gbr.penjelasan && (
+                                  <PaginatedText className="text-[11pt] text-justify mt-2" text={gbr.penjelasan} />
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                         {soal.tipe === 'code' && soal.code && (
