@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/lib/supabase';
 import type { UserProfile } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Tambahkan usePathname
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +29,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname(); // Ambil URL saat ini
 
   useEffect(() => {
     let mounted = true;
@@ -41,7 +42,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Error getting session:', error.message);
           if (mounted) {
             setLoading(false);
-            router.push('/login');
+            // Hanya redirect jika bukan di halaman publik
+            if (pathname !== '/login' && pathname !== '/') router.push('/login');
           }
           return;
         }
@@ -54,14 +56,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           if (mounted) {
             setLoading(false);
-            router.push('/login');
+            // Cegah redirect loop: Jika di / atau /login, biarkan saja.
+            if (pathname !== '/login' && pathname !== '/') {
+              router.push('/login');
+            }
           }
         }
       } catch (err) {
         console.error('Exception in initAuth:', err);
         if (mounted) {
           setLoading(false);
-          router.push('/login');
+          if (pathname !== '/login' && pathname !== '/') router.push('/login');
         }
       }
     };
@@ -79,7 +84,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setProfile(null);
           setLoading(false);
-          router.push('/login');
+          if (pathname !== '/login' && pathname !== '/') {
+            router.push('/login');
+          }
         }
       }
     );
@@ -88,7 +95,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, router]); // Tambahkan pathname ke dependency
 
   async function fetchProfile(userId: string) {
     try {
@@ -115,8 +123,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         queryParams: {
-          hd: 'webmail.uad.ac.id', // restrict to UAD domain
+          hd: 'webmail.uad.ac.id',
         },
+        // Otomatis mengikuti URL Vercel saat di-deploy, dan localhost saat di laptop
         redirectTo: `${window.location.origin}/dashboard`,
       },
     });
