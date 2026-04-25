@@ -31,72 +31,61 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname(); // Ambil URL saat ini
 
-  useEffect(() => {
+ useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error.message);
-          if (mounted) {
-            setLoading(false);
-            // Hanya redirect jika bukan di halaman publik
-            if (pathname !== '/login' && pathname !== '/') router.push('/login');
-          }
-          return;
-        }
-
-        if (session) {
-          if (mounted) {
-            setUser(session.user);
-            await fetchProfile(session.user.id);
-          }
-        } else {
-          if (mounted) {
-            setLoading(false);
-            // Cegah redirect loop: Jika di / atau /login, biarkan saja.
-            if (pathname !== '/login' && pathname !== '/') {
-              router.push('/login');
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Exception in initAuth:', err);
-        if (mounted) {
-          setLoading(false);
-          if (pathname !== '/login' && pathname !== '/') router.push('/login');
+    // Fungsi tunggal pengelola sesi agar tidak tumpang tindih
+    const handleAuth = async (session: any) => {
+      if (!mounted) return;
+      if (session) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        if (pathname !== '/login' && pathname !== '/') {
+          router.push('/login');
         }
       }
     };
 
-    initAuth();
+    // 1. Ambil sesi saat halaman di-refresh
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Session error:', error.message);
+        if (mounted) setLoading(false);
+      } else {
+        handleAuth(session);
+      }
+    });
 
+    // 2. Dengarkan perubahan sesi di background
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!mounted) return;
-
-        if (session) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          if (pathname !== '/login' && pathname !== '/') {
-            router.push('/login');
-          }
+      (_event, session) => {
+        // Hanya eksekusi jika status benar-benar berubah, hindari tabrakan dengan getSession
+        if (_event === 'SIGNED_IN' || _event === 'SIGNED_OUT') {
+          handleAuth(session);
         }
       }
     );
 
+    // 3. FITUR ANTI-MUTER (Failsafe Timeout)
+    // Jika sistem nyangkut lebih dari 5 detik, paksa loading berhenti!
+    const failSafe = setTimeout(() => {
+      if (mounted) {
+        console.warn("Failsafe aktif: Menghentikan loading secara paksa.");
+        setLoading(false);
+      }
+    }, 5000);
+
     return () => {
       mounted = false;
+      clearTimeout(failSafe);
       subscription.unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]); // Tambahkan pathname ke dependency
+  }, [pathname, router]);
 
   async function fetchProfile(userId: string) {
     try {
