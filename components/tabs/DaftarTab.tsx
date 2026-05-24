@@ -1,6 +1,6 @@
 'use client';
 
-import type { DaftarData, FormData, DaftarItem, PertemuanItem } from '@/lib/types';
+import type { DaftarData, FormData, DaftarItem, JawabanItem, PertemuanItem, SoalItem } from '@/lib/types';
 import { LayoutList, RefreshCcw, Plus, Trash2 } from 'lucide-react';
 
 interface DaftarTabProps {
@@ -8,24 +8,77 @@ interface DaftarTabProps {
   onChange: (data: FormData) => void;
 }
 
-export default function DaftarTab({ data, onChange }: DaftarTabProps) {
-  const daftars = data.daftars || {
-    show: false,
-    pertemuan: '',
-    materi: '',
-    isi: [],
-    gambar: [],
-    tabel: [],
-    kode: [],
-    listPertemuan: []
-  };
+function getPostJawabanItems(soal: SoalItem): JawabanItem[] {
+  if (soal.jawaban_items && soal.jawaban_items.length > 0) return soal.jawaban_items;
 
-  // Ensure listPertemuan exists for older data
-  if (!daftars.listPertemuan) {
-    daftars.listPertemuan = [];
+  if ((!soal.tipe || soal.tipe === 'image') && soal.list_gambar && soal.list_gambar.length > 0) {
+    return soal.list_gambar.map((gbr) => ({
+      id: gbr.id,
+      tipe: 'image',
+      file: gbr.file,
+      url: gbr.url,
+      code: '',
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: gbr.nama,
+      penjelasan: gbr.penjelasan,
+    }));
   }
 
-  const updateDaftars = (field: keyof DaftarData, value: any) => {
+  if ((!soal.tipe || soal.tipe === 'image') && soal.gambar_url) {
+    return [{
+      id: soal.id,
+      tipe: 'image',
+      file: soal.gambar,
+      url: soal.gambar_url,
+      code: '',
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  if (soal.tipe === 'code' && soal.code) {
+    return [{
+      id: soal.id,
+      tipe: 'code',
+      file: null,
+      url: '',
+      code: soal.code,
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  if (soal.tipe === 'table' && soal.table_data) {
+    return [{
+      id: soal.id,
+      tipe: 'table',
+      file: null,
+      url: '',
+      code: '',
+      table_data: soal.table_data,
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  return [];
+}
+
+export default function DaftarTab({ data, onChange }: DaftarTabProps) {
+  const daftars: DaftarData = {
+    show: data.daftars?.show ?? false,
+    pertemuan: data.daftars?.pertemuan ?? '',
+    materi: data.daftars?.materi ?? '',
+    isi: data.daftars?.isi ?? [],
+    gambar: data.daftars?.gambar ?? [],
+    tabel: data.daftars?.tabel ?? [],
+    kode: data.daftars?.kode ?? [],
+    listPertemuan: data.daftars?.listPertemuan ?? [],
+  };
+
+  const updateDaftars = <K extends keyof DaftarData>(field: K, value: DaftarData[K]) => {
     onChange({ ...data, daftars: { ...daftars, [field]: value } });
   };
 
@@ -92,8 +145,8 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
       // Ambil posisi Y vertikal murni terhadap kontainer section-nya
       const relativeTop = elRect.top - secRect.top;
       
-      // Bagi dengan tinggi standar kertas A4 (1122.5px) untuk mengetahui di segment mana dia jatuh
-      const pageOffset = Math.floor(Math.max(0, relativeTop) / 1122.5);
+      // Area konten per halaman: A4 dikurangi margin atas 3cm dan bawah 3cm.
+      const pageOffset = Math.floor(Math.max(0, relativeTop) / 895.72);
       const isRoman = section.getAttribute('data-is-roman') === 'true';
       const num = startPage + pageOffset;
       return isRoman ? toRoman(num) : num.toString();
@@ -113,12 +166,14 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
     const newKode: DaftarItem[] = [];
 
     // Pre Test (Bab 1)
+    let preImageCount = 0;
     data.preTest.forEach((ss, i) => {
       const judul = ss.judul_gambar ? capitalizeEachWord(ss.judul_gambar) : '';
       if (!ss.tipe || ss.tipe === 'image') {
         if (ss.gambar_url) {
+          preImageCount += 1;
           const idStr = `pre-img-${i}`;
-          newGambar.push({ id: idStr, label: `Gambar 1.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
+          newGambar.push({ id: idStr, label: `Gambar 1.${preImageCount} ${judul}`.trim(), halaman: getPageNumber(idStr) });
         }
       } else if (ss.tipe === 'code') {
         if (ss.code) {
@@ -155,24 +210,33 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
     });
 
     // Post Test (Bab 3)
+    let postImageCount = 0;
+    let postCodeCount = 0;
+    let postTableCount = 0;
     data.postTest.forEach((ss, i) => {
-      const judul = ss.judul_gambar ? capitalizeEachWord(ss.judul_gambar) : '';
-      if (!ss.tipe || ss.tipe === 'image') {
-        if (ss.gambar_url) {
-          const idStr = `pos-img-${i}`;
-          newGambar.push({ id: idStr, label: `Gambar 3.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
+      const items = getPostJawabanItems(ss);
+
+      items.forEach((item, itemIndex) => {
+        const judul = item.judul ? capitalizeEachWord(item.judul) : '';
+
+        if (item.tipe === 'image' && item.url) {
+          postImageCount += 1;
+          const idStr = `pos-img-${i}-${itemIndex}`;
+          newGambar.push({ id: idStr, label: `Gambar 3.${postImageCount} ${judul}`.trim(), halaman: getPageNumber(idStr) });
         }
-      } else if (ss.tipe === 'code') {
-        if (ss.code) {
-          const idStr = `pos-code-${i}`;
-          newKode.push({ id: idStr, label: `Kode Program 3.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
+
+        if (item.tipe === 'code' && item.code) {
+          postCodeCount += 1;
+          const idStr = `pos-code-${i}-${itemIndex}`;
+          newKode.push({ id: idStr, label: `Kode Program 3.${postCodeCount} ${judul}`.trim(), halaman: getPageNumber(idStr) });
         }
-      } else if (ss.tipe === 'table') {
-        if (ss.table_data) {
-          const idStr = `pos-tab-${i}`;
-          newTabel.push({ id: idStr, label: `Tabel 3.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
+
+        if (item.tipe === 'table' && item.table_data) {
+          postTableCount += 1;
+          const idStr = `pos-tab-${i}-${itemIndex}`;
+          newTabel.push({ id: idStr, label: `Tabel 3.${postTableCount} ${judul}`.trim(), halaman: getPageNumber(idStr) });
         }
-      }
+      });
     });
 
     const materiCap = data.cover.materi?.toUpperCase() || 'MATERI';
@@ -331,7 +395,7 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
           
           <p className="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded leading-relaxed border border-gray-200">
             <strong>✓ Berhasil!</strong> Karena keterbatasan sistem <i>HTML Print</i> bawaan yang tidak mengizinkan pendeteksian letak potong kertas dinamis, sistem kami telah mensimulasikannya via kalkulasi DOM dan mendaftarkan koordinatnya (Auto-Pagination). <br/>
-            Untuk hasil pencetakan nomor halaman pojok kanan bawah yang sempurna, pastikan Anda <strong>TIDAK MENCENTANG</strong> opsi <i>"Headers and Footers"</i> pada Print Dialog!
+            Untuk hasil pencetakan nomor halaman pojok kanan bawah yang sempurna, pastikan Anda <strong>TIDAK MENCENTANG</strong> opsi <i>&quot;Headers and Footers&quot;</i> pada Print Dialog!
           </p>
 
           {renderListEditor('Daftar Isi', 'isi')}

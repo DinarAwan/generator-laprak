@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, ReactNode } from 'react';
-import type { FormData as LaprakFormData } from '@/lib/types';
+import type { FormData as LaprakFormData, JawabanItem, SoalItem } from '@/lib/types';
 
 interface LiveCanvasProps {
   data: LaprakFormData;
@@ -30,9 +30,9 @@ function toRoman(num: number): string {
 }
 
 const A4_PX   = 1122.5;  // 297mm @96dpi
-const PAGE_MT = 151.18;  // 4cm  (margin atas)
+const PAGE_MT = 113.39;  // 3cm  (margin atas)
 const PAGE_MB = 113.39;  // 3cm  (margin bawah)
-const PAGE_ML = 151.18;  // 4cm  (margin kiri)
+const PAGE_ML = 113.39;  // 3cm  (margin kiri)
 const PAGE_MR = 113.39;  // 3cm  (margin kanan)
 
 // Tinggi area cetak per halaman (ruang yang boleh diisi konten)
@@ -94,6 +94,10 @@ function PageSection({
     [id, onPagesCalculated]
   );
 
+  useEffect(() => {
+    notify(pagesCount);
+  }, [notify, pagesCount]);
+
   // ── 1. Hitung dorongan (Push) pada elemen terpotong dan terapkan ──────────
   useEffect(() => {
     const el = measureRef.current;
@@ -118,7 +122,7 @@ function PageSection({
             const elBot = elTop + elRect.height;
             const elH = elRect.height;
 
-            if (elH === 0) return;
+            if (elH === 0 || elH > PRINT_H) return;
 
             const pageIdx = Math.floor(elTop / PRINT_H);
             const pageBottom = (pageIdx + 1) * PRINT_H;
@@ -164,6 +168,15 @@ function PageSection({
     const ro = new ResizeObserver(measureAndBreak);
     ro.observe(el);
 
+    const mo = new MutationObserver(measureAndBreak);
+    mo.observe(el, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['src'],
+    });
+
     const imgs = el.querySelectorAll<HTMLImageElement>('img');
     imgs.forEach((img) => {
       if (!img.complete) {
@@ -172,7 +185,10 @@ function PageSection({
     });
 
     measureAndBreak();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
   }, [isCover, id]);
 
   // ── 2. Sync Effect (Agresif): Tetapkan margin ke DOM tiap kali React Render ─
@@ -203,7 +219,7 @@ function PageSection({
         id={`section-${id}`}
         data-start-page={startPage}
         data-is-roman={isRoman}
-        className="relative print:hidden flex flex-col gap-[16px]"
+        className="page-container relative print:hidden flex flex-col gap-[16px]"
         style={{ width: '210mm' }}
       >
         {/* Layer ukur (invisible) */}
@@ -290,14 +306,14 @@ function PageSection({
         style={{ pageBreakInside: 'auto', pageBreakAfter: 'always', borderSpacing: 0 }}
       >
         <thead className="print:table-header-group">
-          <tr><td style={{ height: '4cm', padding: 0, border: 'none' }}><div style={{ height: '4cm', width: '10px' }} /></td></tr>
+          <tr><td style={{ height: '3cm', padding: 0, border: 'none' }}><div style={{ height: '3cm', width: '10px' }} /></td></tr>
         </thead>
         <tbody>
           <tr>
-            <td style={{ padding: '0 3cm 0 4cm', border: 'none', verticalAlign: 'top' }}>
+            <td style={{ padding: '0 3cm', border: 'none', verticalAlign: 'top' }}>
               <div
                 className={isCover ? 'flex flex-col justify-between items-center text-center' : ''}
-                style={isCover ? { minHeight: `calc(${A4_PX}px - 7cm)` } : {}}
+                style={isCover ? { minHeight: `calc(${A4_PX}px - 6cm)` } : {}}
               >
                 {children}
               </div>
@@ -336,9 +352,44 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
   const pGbr     = daftars.show && daftars.gambar.length > 0 ? sectionPages['daftar-gambar']   || 1 : 0;
   const pTbl     = daftars.show && daftars.tabel.length  > 0 ? sectionPages['daftar-tabel']    || 1 : 0;
   const pKd      = daftars.show && daftars.kode.length   > 0 ? sectionPages['daftar-kode']     || 1 : 0;
-  const pPtm     = daftars.show                              ? sectionPages['daftar-pertemuan'] || 1 : 0;
   const pPreTest = sectionPages['pre-test']         || 1;
   const pHasil   = sectionPages['hasil']            || 1;
+
+  const preImageNumbers = new Map<string, number>();
+  preTest.forEach((soal) => {
+    if ((!soal.tipe || soal.tipe === 'image') && soal.gambar_url) {
+      preImageNumbers.set(soal.id, preImageNumbers.size + 1);
+    }
+  });
+
+  const postListImageNumbers = new Map<string, number>();
+  const postCodeNumbers = new Map<string, number>();
+  const postTableNumbers = new Map<string, number>();
+  let postImageCount = 0;
+  let postCodeCount = 0;
+  let postTableCount = 0;
+  postTest.forEach((soal) => {
+    const items = getPostJawabanItems(soal);
+
+    if (items.length > 0) {
+      items.forEach((item) => {
+        if (item.tipe === 'image' && item.url) {
+          postImageCount += 1;
+          postListImageNumbers.set(item.id, postImageCount);
+        }
+        if (item.tipe === 'code' && item.code) {
+          postCodeCount += 1;
+          postCodeNumbers.set(item.id, postCodeCount);
+        }
+        if (item.tipe === 'table' && item.table_data) {
+          postTableCount += 1;
+          postTableNumbers.set(item.id, postTableCount);
+        }
+      });
+      return;
+    }
+
+  });
 
   const romanOffsets = {
     cover:              1,
@@ -470,9 +521,9 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                           <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
                           {(!soal.tipe || soal.tipe === 'image') && soal.gambar_url && (
                             <div id={`pre-img-${index}`} className="text-center my-3 figure-block">
-                              <img src={soal.gambar_url} alt={`Gambar I.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
+                              <img src={soal.gambar_url} alt={`Gambar 1.${preImageNumbers.get(soal.id) || index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
                               <p className="text-[10pt] font-semibold italic mt-2 text-center">
-                                Gambar 1.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
+                                Gambar 1.{preImageNumbers.get(soal.id) || index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
                               </p>
                             </div>
                           )}
@@ -633,6 +684,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
             <div className="space-y-4">
               {postTest.map((soal, index) => {
                 const letter = String.fromCharCode(65 + index);
+                const jawabanItems = getPostJawabanItems(soal);
                 return (
                   <div key={soal.id} className="soal-container">
                     <div className="flex gap-3 pl-4">
@@ -645,73 +697,71 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                       <span className="text-[11pt] w-4">1.</span>
                       <div className="flex-1 space-y-3">
                         <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
-                        {(!soal.tipe || soal.tipe === 'image') && (
-                          <div className="space-y-4">
-                            {/* Single Image fallback */}
-                            {soal.gambar_url && (!soal.list_gambar || soal.list_gambar.length === 0) && (
-                              <div id={`pos-img-${index}`} className="text-center my-3 figure-block">
-                                <img src={soal.gambar_url} alt={`Gambar 3.${index + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
+                        {jawabanItems.map((item, itemIndex) => {
+                          if (item.tipe === 'image' && item.url) {
+                            const imageNo = postListImageNumbers.get(item.id) || itemIndex + 1;
+                            return (
+                              <div key={item.id} id={`pos-img-${index}-${itemIndex}`} className="my-3">
+                                <div className="text-center figure-block">
+                                  <img src={item.url} alt={`Gambar 3.${imageNo}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
+                                  <p className="text-[10pt] font-semibold italic mt-2 text-center">
+                                    Gambar 3.{imageNo} {item.judul ? capitalizeEachWord(item.judul) : ''}
+                                  </p>
+                                </div>
+                                {item.penjelasan && (
+                                  <PaginatedText className="text-[11pt] text-justify mt-2" text={item.penjelasan} />
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (item.tipe === 'code' && item.code) {
+                            const codeNo = postCodeNumbers.get(item.id) || itemIndex + 1;
+                            return (
+                              <div key={item.id} id={`pos-code-${index}-${itemIndex}`} className="text-left my-3 figure-block">
+                                <div className="code-block">
+                                  <table className="w-full border-collapse">
+                                    <tbody>
+                                      {item.code.split('\n').map((line, i) => (
+                                        <tr key={i}>
+                                          <td className="w-6 text-right pr-2 border-r border-black select-none align-top whitespace-nowrap opacity-80">{i + 1}</td>
+                                          <td className="pl-3 align-top whitespace-pre-wrap break-all">{line || ' '}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                                 <p className="text-[10pt] font-semibold italic mt-2 text-center">
-                                  Gambar 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
+                                  Kode Program 3.{codeNo} {item.judul ? capitalizeEachWord(item.judul) : ''}
                                 </p>
                               </div>
-                            )}
-                            
-                            {/* Multiple Images */}
-                            {soal.list_gambar && soal.list_gambar.map((gbr, gIdx) => (
-                              <div key={gbr.id} className="my-3 figure-block">
-                                {gbr.url && (
-                                  <div className="text-center">
-                                    <img src={gbr.url} alt={`Gambar 3.${index + 1}.${gIdx + 1}`} className="mx-auto max-w-[90%] max-h-[600px] object-contain border border-gray-300" />
-                                    <p className="text-[10pt] font-semibold italic mt-2 text-center">
-                                      Gambar 3.{index + 1}.{gIdx + 1} {gbr.nama ? capitalizeEachWord(gbr.nama) : ''}
-                                    </p>
-                                  </div>
-                                )}
-                                {gbr.penjelasan && (
-                                  <PaginatedText className="text-[11pt] text-justify mt-2" text={gbr.penjelasan} />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {soal.tipe === 'code' && soal.code && (
-                          <div id={`pos-code-${index}`} className="text-left my-3 figure-block">
-                            <div className="code-block">
-                              <table className="w-full border-collapse">
-                                <tbody>
-                                  {soal.code.split('\n').map((line, i) => (
-                                    <tr key={i}>
-                                      <td className="w-6 text-right pr-2 border-r border-black select-none align-top whitespace-nowrap opacity-80">{i + 1}</td>
-                                      <td className="pl-3 align-top whitespace-pre-wrap break-all">{line || ' '}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                            <p className="text-[10pt] font-semibold italic mt-2 text-center">
-                              Kode Program 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
-                            </p>
-                          </div>
-                        )}
-                        {soal.tipe === 'table' && soal.table_data && (
-                          <div id={`pos-tab-${index}`} className="w-full my-4 figure-block">
-                            <p className="text-[10pt] font-semibold italic mb-2 text-center">
-                              Tabel 3.{index + 1} {soal.judul_gambar ? capitalizeEachWord(soal.judul_gambar) : ''}
-                            </p>
-                            <table className="w-full border-collapse border border-black mb-4 mx-auto max-w-[95%]">
-                              <tbody>
-                                {soal.table_data.map((row, rI) => (
-                                  <tr key={rI}>
-                                    {row.map((cell, cI) => (
-                                      <td key={cI} className={`border border-black px-2 py-1 text-[11pt] ${rI === 0 ? 'font-bold text-center bg-gray-100' : ''}`}>{cell}</td>
+                            );
+                          }
+
+                          if (item.tipe === 'table' && item.table_data) {
+                            const tableNo = postTableNumbers.get(item.id) || itemIndex + 1;
+                            return (
+                              <div key={item.id} id={`pos-tab-${index}-${itemIndex}`} className="w-full my-4 figure-block">
+                                <p className="text-[10pt] font-semibold italic mb-2 text-center">
+                                  Tabel 3.{tableNo} {item.judul ? capitalizeEachWord(item.judul) : ''}
+                                </p>
+                                <table className="w-full border-collapse border border-black mb-4 mx-auto max-w-[95%]">
+                                  <tbody>
+                                    {item.table_data.map((row, rI) => (
+                                      <tr key={rI}>
+                                        {row.map((cell, cI) => (
+                                          <td key={cI} className={`border border-black px-2 py-1 text-[11pt] ${rI === 0 ? 'font-bold text-center bg-gray-100' : ''}`}>{cell}</td>
+                                        ))}
+                                      </tr>
                                     ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })}
                         {soal.analisis && <PaginatedText className="text-[11pt] text-justify" text={soal.analisis} />}
                       </div>
                     </div>
@@ -724,4 +774,64 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
       </PageSection>
     </div>
   );
+}
+
+function getPostJawabanItems(soal: SoalItem): JawabanItem[] {
+  if (soal.jawaban_items && soal.jawaban_items.length > 0) {
+    return soal.jawaban_items;
+  }
+
+  if ((!soal.tipe || soal.tipe === 'image') && soal.list_gambar && soal.list_gambar.length > 0) {
+    return soal.list_gambar.map((gbr) => ({
+      id: gbr.id,
+      tipe: 'image',
+      file: gbr.file,
+      url: gbr.url,
+      code: '',
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: gbr.nama,
+      penjelasan: gbr.penjelasan,
+    }));
+  }
+
+  if ((!soal.tipe || soal.tipe === 'image') && soal.gambar_url) {
+    return [{
+      id: soal.id,
+      tipe: 'image',
+      file: soal.gambar,
+      url: soal.gambar_url,
+      code: '',
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  if (soal.tipe === 'code' && soal.code) {
+    return [{
+      id: soal.id,
+      tipe: 'code',
+      file: null,
+      url: '',
+      code: soal.code,
+      table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  if (soal.tipe === 'table' && soal.table_data) {
+    return [{
+      id: soal.id,
+      tipe: 'table',
+      file: null,
+      url: '',
+      code: '',
+      table_data: soal.table_data,
+      judul: soal.judul_gambar,
+      penjelasan: '',
+    }];
+  }
+
+  return [];
 }

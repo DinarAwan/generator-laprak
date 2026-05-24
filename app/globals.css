@@ -119,10 +119,17 @@ body {
     margin: 0; padding: 0; gap: 0;
   }
 
-  /* Protect specific elements from being sliced in half across pages! */
-  .soal-container, table, img, .code-block, .cover-section {
+  /* Keep atomic content together, while allowing long questions to flow naturally. */
+  .figure-block,
+  .code-block,
+  .cover-section {
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  .soal-container {
+    page-break-inside: auto;
+    break-inside: auto;
   }
 
   .a4-wrapper {

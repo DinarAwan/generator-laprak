@@ -77,13 +77,14 @@ export default function CoverTab({ data, onChange }: CoverTabProps) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Nama Lengkap
-            <span className="text-xs text-gray-400 ml-2">(otomatis)</span>
+            <span className="text-xs text-gray-400 ml-2">(bisa diedit)</span>
           </label>
           <input
             type="text"
             value={data.nama}
-            readOnly
-            className="w-full px-4 py-2.5 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
+            onChange={(e) => update('nama', e.target.value)}
+            placeholder="cth: Nama Mahasiswa"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-sm"
           />
         </div>
 

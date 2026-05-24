@@ -23,6 +23,17 @@ export interface GambarItem {
   penjelasan: string;
 }
 
+export interface JawabanItem {
+  id: string;
+  tipe: 'image' | 'code' | 'table';
+  file: File | null;
+  url: string;
+  code: string;
+  table_data: string[][];
+  judul: string;
+  penjelasan: string;
+}
+
 export interface SoalItem {
   id: string;
   pertanyaan: string;
@@ -34,6 +45,7 @@ export interface SoalItem {
   judul_gambar: string;
   analisis: string;
   list_gambar?: GambarItem[];
+  jawaban_items?: JawabanItem[];
 }
 
 export interface HasilData {
@@ -101,6 +113,20 @@ export function createEmptySoal(): SoalItem {
     judul_gambar: '',
     analisis: '',
     list_gambar: [],
+    jawaban_items: [],
+  };
+}
+
+export function createEmptyJawabanItem(tipe: 'image' | 'code' | 'table' = 'image'): JawabanItem {
+  return {
+    id: crypto.randomUUID(),
+    tipe,
+    file: null,
+    url: '',
+    code: '',
+    table_data: [['Header 1', 'Header 2'], ['Data 1', 'Data 2']],
+    judul: '',
+    penjelasan: '',
   };
 }
 
