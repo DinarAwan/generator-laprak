@@ -10,6 +10,7 @@ import { createInitialFormData } from '@/lib/types';
 import type { FormData as LaprakFormData } from '@/lib/types';
 import { Download, Lock, LogOut, GraduationCap, Crown, FileText, Loader2 } from 'lucide-react';
 import { exportToWord } from '@/lib/exportToWord';
+import Image from 'next/image';
 
 export default function DashboardPage() {
   const { user, profile, loading, signOut } = useAuth();
@@ -78,7 +79,13 @@ export default function DashboardPage() {
       <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-5 shrink-0 no-print z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
+            <Image
+              src="/uad.png"
+              alt="Auto-Laprak Logo"
+              width={16}
+              height={16}
+              className="w-8 h-8"
+            />
           </div>
           <h1 className="text-sm font-bold text-gray-800">Auto-Laprak UAD</h1>
           {isPremium && (

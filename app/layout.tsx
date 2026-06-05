@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: "Auto-Laprak UAD — Generator Laporan Praktikum",
   description:
     "Otomatisasi pembuatan Laporan Praktikum Universitas Ahmad Dahlan. Live preview, format A4 resmi, export PDF instan.",
+    icons: {
+    icon: "/uuad.png",        // path dari folder public
+    shortcut: "/uuad.png",
+    apple: "/uuad.png",       // untuk perangkat Apple
+  },
 };
 
 export default function RootLayout({
