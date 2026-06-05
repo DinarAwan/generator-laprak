@@ -665,7 +665,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
               <div className="flex gap-3 pl-4 section-block">
                 <span className="text-[11pt] font-bold w-4">D.</span>
                 <div className="flex-1">
-                  <p className="text-[11pt] font-bold mb-1 header-breakable">Analisis Hasil :</p>
+                  <p className="text-[11pt] font-bold mb-1 header-breakable">Analisis Hasil (Ulasan) :</p>
                   <PaginatedText className="text-[11pt] text-justify" text={hasil.analisis_hasil || 'Berikan penjelasan mengenai hasil yang didapatkan. Mengapa hasilnya demikian? Apakah ada kendala saat proses berlangsung?'} />
                 </div>
               </div>
