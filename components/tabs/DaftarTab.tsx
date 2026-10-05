@@ -112,7 +112,6 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
   };
 
   const handleGenerate = () => {
-    // Fungsi pintar yang mencari elemen di layar dan mengkalkulasi posisi absolut kertasnya!
     const toRoman = (num: number): string => {
       const romanMap: [number, string][] = [
         [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'],
@@ -134,17 +133,17 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
       if (!el) return '';
       const section = el.closest('.page-container');
       if (!section) return '';
-      
+
       const startPageStr = section.getAttribute('data-start-page');
       if (!startPageStr) return '';
-      
+
       const startPage = parseInt(startPageStr, 10);
       const elRect = el.getBoundingClientRect();
       const secRect = section.getBoundingClientRect();
-      
-      // Ambil posisi Y vertikal murni terhadap kontainer section-nya
+
+      // Posisi Y vertikal terhadap kontainer section-nya
       const relativeTop = elRect.top - secRect.top;
-      
+
       // Area konten per halaman: A4 dikurangi margin atas 3cm dan bawah 3cm.
       const pageOffset = Math.floor(Math.max(0, relativeTop) / 895.72);
       const isRoman = section.getAttribute('data-is-roman') === 'true';
@@ -197,15 +196,15 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
           newGambar.push({ id: idStr, label: `Gambar 2.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
         }
       } else if (ss.tipe === 'code') {
-         if (ss.code) {
+        if (ss.code) {
           const idStr = `has-code-${i}`;
           newKode.push({ id: idStr, label: `Kode Program 2.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
-         }
+        }
       } else if (ss.tipe === 'table') {
-         if (ss.table_data) {
+        if (ss.table_data) {
           const idStr = `has-tab-${i}`;
           newTabel.push({ id: idStr, label: `Tabel 2.${i + 1} ${judul}`.trim(), halaman: getPageNumber(idStr) });
-         }
+        }
       }
     });
 
@@ -240,8 +239,9 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
     });
 
     const materiCap = data.cover.materi?.toUpperCase() || 'MATERI';
+    const hasFeedback = !!data.feedback?.trim();
 
-    // Daftar Isi Otomatis berdasarkan Halaman LiveCanvas!
+    // Daftar Isi otomatis berdasarkan halaman LiveCanvas
     const newIsi: DaftarItem[] = [
       { id: 'i1', label: 'DAFTAR ISI', halaman: getSectionPage('daftar-isi') || '2' },
       { id: 'i2', label: 'DAFTAR GAMBAR', halaman: getSectionPage('daftar-gambar') || '3' },
@@ -257,6 +257,13 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
       { id: 'i12', label: '\tC. Implementasi dan Dokumentasi', halaman: getSectionPage('hasil') || '10' },
       { id: 'i13', label: '\tD. Analisis Hasil', halaman: getSectionPage('hasil') || '10' },
       { id: 'i14', label: 'III.\tPost Test', halaman: getSectionPage('post-test') || '23' },
+      ...(hasFeedback
+        ? [{
+            id: 'i14b',
+            label: 'IV.\tFeedback',
+            halaman: getPageNumber('feedback-section') || getSectionPage('post-test') || '24',
+          }]
+        : []),
       { id: 'i15', label: 'Daftar Pustaka Singkat', halaman: getSectionPage('post-test') || '26' },
       { id: 'i16', label: 'Lampiran', halaman: getSectionPage('post-test') || '26' }
     ];
@@ -392,7 +399,7 @@ export default function DaftarTab({ data, onChange }: DaftarTabProps) {
             />
             <span className="text-sm font-medium text-gray-700">Tampilkan ke dalam Canvas Halaman</span>
           </label>
-          
+
           <p className="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded leading-relaxed border border-gray-200">
             <strong>✓ Berhasil!</strong> Karena keterbatasan sistem <i>HTML Print</i> bawaan yang tidak mengizinkan pendeteksian letak potong kertas dinamis, sistem kami telah mensimulasikannya via kalkulasi DOM dan mendaftarkan koordinatnya (Auto-Pagination). <br/>
             Untuk hasil pencetakan nomor halaman pojok kanan bawah yang sempurna, pastikan Anda <strong>TIDAK MENCENTANG</strong> opsi <i>&quot;Headers and Footers&quot;</i> pada Print Dialog!

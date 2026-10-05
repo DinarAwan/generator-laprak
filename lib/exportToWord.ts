@@ -575,7 +575,7 @@ export async function exportToWord(data: FormData) {
   postTest.forEach((soal, index) => {
     const letter = String.fromCharCode(65 + index);
     children.push(numberedParagraph(`${letter}.`, soal.pertanyaan || `Pertanyaan ${index + 1}`));
-    children.push(numberedParagraph("1.", "Jawaban", { left: 1080, tab: 1080, spacing: { after: 120 } }));
+    children.push(numberedParagraph("Jawaban", " : ", { left: 1080, tab: 1080, spacing: { after: 120 } }));
 
     getPostJawabanItems(soal).forEach((item) => {
       if (item.tipe === "image" && item.url) {
@@ -602,6 +602,11 @@ export async function exportToWord(data: FormData) {
 
     children.push(...indentedJustifiedParagraphs(soal.analisis, ANSWER_CONTENT_LEFT));
   });
+
+    if (data.feedback?.trim()) {
+    children.push(heading("IV. Feedback")); // tanpa pageBreakBefore, jadi satu halaman dengan Post Test
+    children.push(...justifiedParagraphs(data.feedback));
+  }
 
   const doc = new Document({
     styles: {

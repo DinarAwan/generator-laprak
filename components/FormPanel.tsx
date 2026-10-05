@@ -7,7 +7,8 @@ import PreTestTab from '@/components/tabs/PreTestTab';
 import HasilTab from '@/components/tabs/HasilTab';
 import PostTestTab from '@/components/tabs/PostTestTab';
 import DaftarTab from '@/components/tabs/DaftarTab';
-import { BookOpen, FlaskConical, BarChart3, ClipboardCheck, LayoutList } from 'lucide-react';
+import FeedbackTab from '@/components/tabs/FeedbackTab';
+import { BookOpen, FlaskConical, BarChart3, ClipboardCheck, LayoutList, MessageSquareText } from 'lucide-react';
 
 interface FormPanelProps {
   data: LaprakFormData;
@@ -20,6 +21,7 @@ const tabs = [
   { id: 'pretest', label: 'Pre-Test', icon: FlaskConical, color: 'emerald' },
   { id: 'hasil', label: 'Hasil', icon: BarChart3, color: 'amber' },
   { id: 'posttest', label: 'Post-Test', icon: ClipboardCheck, color: 'purple' },
+  { id: 'feedback', label: 'Feedback', icon: MessageSquareText, color: 'rose' },
 ] as const;
 
 type TabId = typeof tabs[number]['id'];
@@ -30,6 +32,7 @@ const tabColors: Record<string, string> = {
   emerald: 'bg-emerald-50 text-emerald-700 border-emerald-500',
   amber: 'bg-amber-50 text-amber-700 border-amber-500',
   purple: 'bg-purple-50 text-purple-700 border-purple-500',
+  rose: 'bg-rose-50 text-rose-700 border-rose-500',
 };
 
 const tabInactiveColors: Record<string, string> = {
@@ -38,6 +41,7 @@ const tabInactiveColors: Record<string, string> = {
   emerald: 'hover:bg-emerald-50/50 hover:text-emerald-600',
   amber: 'hover:bg-amber-50/50 hover:text-amber-600',
   purple: 'hover:bg-purple-50/50 hover:text-purple-600',
+  rose: 'hover:bg-rose-50/50 hover:text-rose-600',
 };
 
 export default function FormPanel({ data, onChange }: FormPanelProps) {
@@ -46,7 +50,7 @@ export default function FormPanel({ data, onChange }: FormPanelProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-100 px-2 pt-2 gap-1 shrink-0">
+      <div className="flex border-b border-gray-100 px-2 pt-2 gap-1 shrink-0 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -54,7 +58,7 @@ export default function FormPanel({ data, onChange }: FormPanelProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-all whitespace-nowrap ${
                 isActive
                   ? tabColors[tab.color]
                   : `border-transparent text-gray-400 ${tabInactiveColors[tab.color]}`
@@ -101,6 +105,12 @@ export default function FormPanel({ data, onChange }: FormPanelProps) {
             onIntroChange={(text) => onChange({ ...data, postTestIntro: text })}
             data={data.postTest}
             onChange={(postTest) => onChange({ ...data, postTest })}
+          />
+        )}
+        {activeTab === 'feedback' && (
+          <FeedbackTab
+            value={data.feedback ?? ''}
+            onChange={(feedback) => onChange({ ...data, feedback })}
           />
         )}
       </div>

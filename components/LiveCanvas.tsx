@@ -335,7 +335,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
 
   const daftars = data.daftars || {
     show: false, pertemuan: '', materi: '',
-    isi: [], gambar: [], tabel: [], kode: [],
+    isi: [], gambar: [], tabel: [], kode: [], listPertemuan: [],
   };
 
   const [sectionPages, setSectionPages] = useState<Record<string, number>>({});
@@ -370,25 +370,20 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
   let postTableCount = 0;
   postTest.forEach((soal) => {
     const items = getPostJawabanItems(soal);
-
-    if (items.length > 0) {
-      items.forEach((item) => {
-        if (item.tipe === 'image' && item.url) {
-          postImageCount += 1;
-          postListImageNumbers.set(item.id, postImageCount);
-        }
-        if (item.tipe === 'code' && item.code) {
-          postCodeCount += 1;
-          postCodeNumbers.set(item.id, postCodeCount);
-        }
-        if (item.tipe === 'table' && item.table_data) {
-          postTableCount += 1;
-          postTableNumbers.set(item.id, postTableCount);
-        }
-      });
-      return;
-    }
-
+    items.forEach((item) => {
+      if (item.tipe === 'image' && item.url) {
+        postImageCount += 1;
+        postListImageNumbers.set(item.id, postImageCount);
+      }
+      if (item.tipe === 'code' && item.code) {
+        postCodeCount += 1;
+        postCodeNumbers.set(item.id, postCodeCount);
+      }
+      if (item.tipe === 'table' && item.table_data) {
+        postTableCount += 1;
+        postTableNumbers.set(item.id, postTableCount);
+      }
+    });
   });
 
   const romanOffsets = {
@@ -674,7 +669,7 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
         </div>
       </PageSection>
 
-      {/* ══════════ BAB III: POST-TEST ══════════ */}
+      {/* ══════════ BAB III: POST-TEST + BAB IV: FEEDBACK (satu section) ══════════ */}
       <PageSection id="post-test" startPage={arabicOffsets['post-test']} onPagesCalculated={handlePagesCalculated}>
         <div className="flex gap-4">
           <h2 className="font-bold text-[11pt] w-8">III.</h2>
@@ -694,9 +689,9 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
                       </div>
                     </div>
                     <div className="flex gap-3 pl-[3.25rem] mt-1">
-                      <span className="text-[11pt] w-4">1.</span>
+                      {/* <span className="text-[11pt] w-4">1.</span> */}
                       <div className="flex-1 space-y-3">
-                        <p className="text-[11pt] text-justify header-breakable">Jawaban</p>
+                        <p className="text-[11pt] text-justify header-breakable">Jawaban : </p>
                         {jawabanItems.map((item, itemIndex) => {
                           if (item.tipe === 'image' && item.url) {
                             const imageNo = postListImageNumbers.get(item.id) || itemIndex + 1;
@@ -771,6 +766,17 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
             </div>
           </div>
         </div>
+
+        {/* ══════════ BAB IV: FEEDBACK ══════════ */}
+        {data.feedback?.trim() && (
+          <div id="feedback-section" className="flex gap-4 mt-6">
+            <h2 className="font-bold text-[11pt] w-8">IV.</h2>
+            <div className="flex-1">
+              <h2 className="font-bold text-[11pt] mb-4 header-breakable">Feedback</h2>
+              <PaginatedText className="text-[11pt] text-justify" text={data.feedback} />
+            </div>
+          </div>
+        )}
       </PageSection>
     </div>
   );

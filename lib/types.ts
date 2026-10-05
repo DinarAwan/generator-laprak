@@ -98,6 +98,7 @@ export interface FormData {
   hasil: HasilData;
   postTestIntro: string;
   postTest: SoalItem[];
+  feedback: string; // Bab IV: satu paragraf, satu halaman/section dengan Post Test
   daftars: DaftarData;
 }
 
@@ -165,6 +166,7 @@ export function createInitialFormData(nama: string, nim: string): FormData {
     },
     postTestIntro: 'Pada bagian ini digunakan untuk melaporkan jawaban Post Test pada akhir pertemuan praktikum.',
     postTest: [createEmptySoal()],
+    feedback: '',
     daftars: {
       show: false,
       pertemuan: '',
