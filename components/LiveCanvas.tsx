@@ -463,10 +463,10 @@ export default function LiveCanvas({ data }: LiveCanvasProps) {
       <PageSection id="cover" startPage={romanOffsets['cover']} onPagesCalculated={handlePagesCalculated} hidePageNumber isCover isRoman>
         <div className="cover-section top-section">
           <h1 className="font-bold text-[14pt] leading-tight mt-6">LAPORAN PRAKTIKUM</h1>
-          <h2 className="font-bold text-[14pt] leading-tight">({cover.mata_praktikum || 'Mata Praktikum'})</h2>
+          <h2 className="font-bold text-[14pt] leading-tight">{cover.mata_praktikum || 'Mata Praktikum'}</h2>
           <h3 className="font-bold text-[14pt] leading-tight mt-1">Materi</h3>
-          <h4 className="font-bold text-[14pt] leading-tight">({cover.materi || 'Judul Pertemuan'})</h4>
-          <p className="font-bold text-[14pt] leading-tight mt-1">({cover.hari_tanggal || 'Hari Tanggal dan Sesi Praktikum'})</p>
+          <h4 className="font-bold text-[14pt] leading-tight">{cover.materi || 'Judul Pertemuan'}</h4>
+          <p className="font-bold text-[14pt] leading-tight mt-1">{cover.hari_tanggal || 'Hari Tanggal dan Sesi Praktikum'}</p>
         </div>
         <div className="cover-section mid-section">
           <img src="/uad.png" alt="Logo Universitas Ahmad Dahlan" className="w-[5.5cm] h-[5.5cm] object-contain mx-auto" />

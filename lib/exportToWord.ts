@@ -424,7 +424,7 @@ export async function exportToWord(data: FormData) {
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: `(${cover.mata_praktikum || "Mata Praktikum"})`, bold: true, size: 28 })],
+      children: [new TextRun({ text: cover.mata_praktikum || "Mata Praktikum", bold: true, size: 28 })],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -433,14 +433,14 @@ export async function exportToWord(data: FormData) {
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: `(${cover.materi || "Judul Pertemuan"})`, bold: true, size: 28 })],
+      children: [new TextRun({ text: cover.materi || "Judul Pertemuan", bold: true, size: 28 })],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 900 },
       children: [
         new TextRun({
-          text: `(${cover.hari_tanggal || "Hari Tanggal dan Sesi Praktikum"})`,
+          text: cover.hari_tanggal || "Hari Tanggal dan Sesi Praktikum",
           bold: true,
           size: 28,
         }),
